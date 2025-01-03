@@ -7,6 +7,19 @@
 const { createCoreController } = require('@strapi/strapi').factories;
 
 module.exports = createCoreController('api::container.container', ({ strapi }) => ({
+  /**
+   * Handles chat interactions with the RAG API
+   * @async
+   * @function chat
+   * @description
+   * Processes chat requests by:
+   * 1. Validating required fields (service category, province, question)
+   * 2. Retrieving service category and province details
+   * 3. Getting RAG configuration settings
+   * 4. Formatting message history and current question for the API
+   * 5. Making an authenticated request to the RAG chat endpoint
+   * Returns the RAG API response or appropriate error messages.
+   */
   async chat(ctx) {
     try {
       const { messageHistory, currentQuestion, serviceCategoryId, provinceId } =
@@ -42,7 +55,9 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       }
 
       // Construct the container endpoint
-      // const containerEndpoint = `/a/${province.code.toLowerCase()}-${serviceCategory.name.toLowerCase().replace(/\s+/g, '-')}-${activeProvider.toLowerCase()}/api/chat`;
+      // const containerEndpoint = `/a/${province.code.toLowerCase()}-${serviceCategory.name
+      //   .toLowerCase()
+      //   .replace(/\s+/g, '-')}-${activeProvider.toLowerCase()}/api/chat`;
       const containerEndpoint = '/a/test/api/chat'; // TODO: Remove this line and restore the previous line once the container is configured
 
       // Format payload for OpenAI
@@ -59,12 +74,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
         ],
       };
 
-      // Get auth token from query parameters
-      // const authToken = ctx.request.query.Authorization;
-      // if (!authToken) {
-      //   return ctx.unauthorized('Missing authorization token');
-      // }
-
+      // Get valid token from RAG auth service
       const token = await strapi.service('api::custom.rag-auth').getValidToken();
 
       // Make request to RAG API
