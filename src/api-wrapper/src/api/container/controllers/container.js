@@ -52,7 +52,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       );
 
       if (!ragUrl || !activeProvider) {
-        return ctx.badRequest('Missing configuration settings');
+        return ctx.badRequest('Missing configuration settings(activeProvider)');
       }
 
       // Use static endpoint if environment variable is set
@@ -80,8 +80,6 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       // Get valid token from RAG auth service
       const token = await strapi.service('api::custom.rag-auth').getValidToken();
       // Ensure endpoint starts with a slash
-
-      // return { containerEndpoint: `${ragUrl}${containerEndpoint}`, token };
 
       // Make request to RAG API
       const response = await strapi
@@ -113,7 +111,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
 
       // Return 200 immediately
       ctx.status = 200;
-      ctx.body = { message: 'Streaming started' };
+      ctx.body = { message: 'Streaming started', messageHistory: formattedPayload };
     } catch (error) {
       console.error('Error in container chat:', error);
       return ctx.internalServerError('An error occurred while processing your request');

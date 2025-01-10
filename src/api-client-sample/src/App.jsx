@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import io from 'socket.io-client';
 import './App.css';
+import ReactMarkdown from 'react-markdown';
 
 const STRAPI_URL = 'http://localhost:1338';
 const socket = io(STRAPI_URL, {
@@ -167,11 +168,9 @@ function App() {
               className={`message ${msg.role === 'user' ? 'user' : 'assistant'}`}
             >
               <strong>{msg.role === 'user' ? 'You' : 'Assistant'}:</strong>
-              <p>
-                {Array.isArray(msg.content) 
-                  ? JSON.stringify(msg.content, null, 2)
-                  : msg.content}
-              </p>
+              <ReactMarkdown>
+                {msg.content}
+              </ReactMarkdown>
             </div>
           ))}
           {loading && <div className="loading">Assistant is typing...</div>}

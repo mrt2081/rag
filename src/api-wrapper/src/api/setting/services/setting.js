@@ -38,4 +38,22 @@ module.exports = createCoreService('api::setting.setting', ({ strapi }) => ({
       throw new Error(`Failed to fetch setting: ${error.message}`);
     }
   },
+
+  async updateSetting(key, value) {
+    // Ensure value is a valid JSON object
+    const jsonValue = typeof value === 'string' ? JSON.stringify({ value }) : value;
+
+    const setting = await strapi.db
+      .query('api::setting.setting')
+      .findOne({ where: { key } });
+    if (setting) {
+      await strapi.db
+        .query('api::setting.setting')
+        .update({ where: { key }, data: { value: jsonValue } });
+    } else {
+      await strapi.db
+        .query('api::setting.setting')
+        .create({ data: { key, value: jsonValue } });
+    }
+  },
 }));
