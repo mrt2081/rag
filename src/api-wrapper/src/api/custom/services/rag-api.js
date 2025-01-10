@@ -86,7 +86,7 @@ module.exports = () => ({
    * and makes an authenticated POST request to the specified endpoint with the given payload.
    * Returns the response if successful, throws an error if the request fails.
    */
-  async postRAGApi(payload, endpoint, token) {
+  async postRAGApi(payload, endpoint, token, stream = false) {
     const ragUrl = await strapi
       .service('api::setting.setting')
       .getSetting('RAG_APP_URL')
@@ -96,11 +96,18 @@ module.exports = () => ({
     endpoint = !endpoint.startsWith('/') ? `/${endpoint}` : endpoint;
 
     try {
-      const response = await axios.post(`${ragUrl}${endpoint}`, payload, {
-        headers: {
-          Cookie: `Authorization="Bearer ${token}"`,
-        },
-      });
+      const response = stream
+        ? await axios.post(`${ragUrl}${endpoint}`, payload, {
+            headers: {
+              Cookie: `Authorization="Bearer ${token}"`,
+            },
+            responseType: 'stream',
+          })
+        : await axios.post(`${ragUrl}${endpoint}`, payload, {
+            headers: {
+              Cookie: `Authorization="Bearer ${token}"`,
+            },
+          });
       return response;
     } catch (error) {
       console.error('Error posting to RAG API:', error);

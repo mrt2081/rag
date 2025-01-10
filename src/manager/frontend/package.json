@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "export ENVIRONMENT=dev && next dev",
+    "dev": "set ENVIRONMENT=dev && next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint '**/*.{ts,tsx}' --max-warnings=0",

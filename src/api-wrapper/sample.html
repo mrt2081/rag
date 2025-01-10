@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat Stream Test</title>
+    <script>
+        async function startStream() {
+            const messageHistory = []; // You can modify this to include previous messages if needed
+            const currentQuestion = document.getElementById('currentQuestion').value;
+            const serviceCategoryId = document.getElementById('serviceCategoryId').value;
+            const provinceId = document.getElementById('provinceId').value;
+
+            const response = await fetch('http://localhost:1338/api/containers/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    messageHistory,
+                    currentQuestion,
+                    serviceCategoryId,
+                    provinceId
+                }),
+            });
+
+            if (!response.ok) {
+                console.error('Error:', response.statusText);
+                return;
+            }
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder('utf-8');
+            let done = false;
+
+            while (!done) {
+                const { value, done: streamDone } = await reader.read();
+                done = streamDone;
+
+                if (value) {
+                    const chunk = decoder.decode(value, { stream: true });
+                    // Split the chunk by lines to handle multiple messages
+                    console.log(chunk, 'chunk');
+                    const messages = chunk.split("\n").filter(line => line.trim() !== "");
+                    messages.forEach(msg => {
+                        if (msg.startsWith("data: ")) {
+                            const parsedChunk = JSON.parse(msg.slice(6)); // Remove "data: " prefix
+                            document.getElementById('response').innerText += `\n${parsedChunk.content}`;
+                        }
+                    });
+                }
+            }
+        }
+    </script>
+</head>
+
+<body>
+    <h1>Chat Stream Test</h1>
+    <div>
+        <label for="currentQuestion">Current Question:</label><br>
+        <input type="text" id="currentQuestion" placeholder="What is your question?"><br>
+
+        <label for="serviceCategoryId">Service Category ID:</label><br>
+        <input type="text" id="serviceCategoryId" placeholder="Enter Service Category ID"><br>
+
+        <label for="provinceId">Province ID:</label><br>
+        <input type="text" id="provinceId" placeholder="Enter Province ID"><br><br>
+
+        <button onclick="startStream()">Start Stream</button>
+    </div>
+    <h2>Response:</h2>
+    <pre id="response"></pre>
+</body>
+
+</html>

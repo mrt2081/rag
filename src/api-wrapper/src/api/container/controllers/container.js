@@ -1,9 +1,5 @@
 'use strict';
 
-/**
- * container controller
- */
-
 const { createCoreController } = require('@strapi/strapi').factories;
 
 module.exports = createCoreController('api::container.container', ({ strapi }) => ({
@@ -22,21 +18,26 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
    */
   async chat(ctx) {
     try {
-      const { messageHistory, currentQuestion, serviceCategoryId, provinceId } =
+      // Validate request body
+      if (!ctx.request.body) {
+        return ctx.badRequest('Request body is missing');
+      }
+
+      const { messageHistory, currentQuestion, serviceCategoryId, provinceId, socketId } =
         ctx.request.body;
 
       // Validate required fields
-      if (!serviceCategoryId || !provinceId || !currentQuestion) {
+      if (!serviceCategoryId || !provinceId) {
         return ctx.badRequest('Missing required fields');
       }
 
       // Get service category and province
       const serviceCategory = await strapi.db
         .query('api::service-category.service-category')
-        .findOne({ where: { id: serviceCategoryId } });
+        .findOne({ where: { externalId: serviceCategoryId } });
       const province = await strapi.db
         .query('api::province.province')
-        .findOne({ where: { id: provinceId } });
+        .findOne({ where: { externalId: provinceId } });
 
       if (!serviceCategory || !province) {
         return ctx.badRequest('Invalid service category or province');
@@ -54,11 +55,13 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
         return ctx.badRequest('Missing configuration settings');
       }
 
-      // Construct the container endpoint
-      // const containerEndpoint = `/a/${province.code.toLowerCase()}-${serviceCategory.name
-      //   .toLowerCase()
-      //   .replace(/\s+/g, '-')}-${activeProvider.toLowerCase()}/api/chat`;
-      const containerEndpoint = '/a/test/api/chat'; // TODO: Remove this line and restore the previous line once the container is configured
+      // Use static endpoint if environment variable is set
+      const staticEndpoint = process.env.STATIC_CONTAINER_ENDPOINT;
+      const containerEndpoint =
+        staticEndpoint ||
+        `/a/${province.code.toLowerCase()}-${serviceCategory.name
+          .toLowerCase()
+          .replace(/\s+/g, '-')}-${activeProvider.toLowerCase()}/api/chat`;
 
       // Format payload for OpenAI
       const formattedPayload = {
@@ -76,13 +79,41 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
 
       // Get valid token from RAG auth service
       const token = await strapi.service('api::custom.rag-auth').getValidToken();
+      // Ensure endpoint starts with a slash
+
+      // return { containerEndpoint: `${ragUrl}${containerEndpoint}`, token };
 
       // Make request to RAG API
       const response = await strapi
         .service('api::custom.rag-api')
-        .postRAGApi(formattedPayload, containerEndpoint, token);
+        .postRAGApi(formattedPayload, containerEndpoint, token, true);
 
-      return response.data;
+      //  console.log(response);
+
+      // Check if response is valid
+      if (!response) {
+        console.error('Invalid response');
+        return ctx.internalServerError('Failed to get a valid response from the API');
+      }
+
+      // Emit data to the specific user using Socket.IO
+      const io = strapi.io; // Assuming you have set up Socket.IO and attached it to Strapi
+      response.data.on('data', chunk => {
+        io.to(socketId).emit('chatData', chunk); // Emit data to the specific socket ID
+      });
+
+      response.data.on('end', () => {
+        io.to(socketId).emit('chatEnd'); // Notify the client that the stream has ended
+      });
+
+      response.data.on('error', err => {
+        console.error('Streaming error:', err);
+        io.to(socketId).emit('chatError', { error: 'Streaming error occurred' });
+      });
+
+      // Return 200 immediately
+      ctx.status = 200;
+      ctx.body = { message: 'Streaming started' };
     } catch (error) {
       console.error('Error in container chat:', error);
       return ctx.internalServerError('An error occurred while processing your request');
