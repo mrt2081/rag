@@ -13,4 +13,18 @@ module.exports = {
       // Optional: Add any specific options for the cron task here
     },
   },
+
+  '*/3 * * * *': {
+    task: async ({ strapi }) => {
+      try {
+        await strapi.service('api::container.container').processUnconfiguredContainers();
+        console.log('Cron job executed: Unconfigured containers processed.');
+      } catch (error) {
+        console.error('Error processing unconfigured containers:', error);
+      }
+    },
+    options: {
+      // Optional: Add any specific options for the cron task here
+    },
+  },
 };
