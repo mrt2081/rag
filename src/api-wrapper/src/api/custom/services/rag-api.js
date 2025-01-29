@@ -136,4 +136,40 @@ module.exports = () => ({
       throw error;
     }
   },
+
+  /**
+   * Makes a DELETE request to the RAG API endpoint
+   * @async
+   * @function deleteRAGApi
+   * @param {string} endpoint - The base API endpoint path
+   * @param {string} itemId - The ID of the item to delete
+   * @param {string} token - The authentication token for authorization
+   * @returns {Promise<Object>} The response from the RAG API
+   * @throws {Error} If the request fails
+   */
+  async deleteRAGApi(endpoint, itemId, token) {
+    const ragUrl = await strapi
+      .service('api::setting.setting')
+      .getSetting('RAG_APP_URL')
+      .then(url => JSON.parse(url));
+
+    // Ensure endpoint starts with a slash
+    endpoint = !endpoint.startsWith('/') ? `/${endpoint}` : endpoint;
+    
+    // Ensure endpoint ends without a slash
+    endpoint = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+
+    try {
+      const url = `${ragUrl}${endpoint}/${itemId}`;
+      const response = await axios.delete(url, {
+        headers: {
+          Cookie: `Authorization="Bearer ${token}"`,
+        },
+      });
+      return response;
+    } catch (error) {
+      console.error('Error deleting from RAG API:', error);
+      throw error;
+    }
+  },
 });

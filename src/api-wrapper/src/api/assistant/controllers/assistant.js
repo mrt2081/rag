@@ -159,6 +159,85 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
     }
   },
 
+  async delete(ctx) {
+    const { id } = ctx.params;
+
+    try {
+      // Check if assistant exists
+      const assistant = await strapi.documents('api::assistant.assistant').findOne({
+        documentId: id,
+      });
+
+      if (!assistant) {
+        return ctx.notFound('Assistant not found');
+      }
+
+      // Get associated containers before deletion
+      const containers = await strapi.documents('api::container.container').findMany({
+        filters: { assistantId: assistant.id },
+      });
+
+      // Get valid RAG token
+      const token = await strapi.service('api::custom.rag-auth').getValidToken();
+
+      // Track successfully deleted RAG services
+      const successfulDeletions = [];
+
+      // Delete each container's RAG service
+      await Promise.all(
+        containers.map(async container => {
+          try {
+            await strapi
+              .service('api::custom.rag-api')
+              .deleteRAGApi('/manager/api/services', container.name, token);
+            // Add to successful deletions if RAG deletion succeeds
+            successfulDeletions.push(container.documentId);
+          } catch (error) {
+            console.error(
+              `Failed to delete RAG service for container ${container.name}:`,
+              error
+            );
+          }
+        })
+      );
+
+      // Delete containers from database that were successfully deleted from RAG
+      if (successfulDeletions.length > 0) {
+        const deleteResults = await Promise.all(
+          successfulDeletions.map(documentId =>
+            strapi
+              .documents('api::container.container')
+              .delete({ documentId: documentId })
+          )
+        );
+
+        if (deleteResults.some(result => !result)) {
+          throw new Error('Failed to delete one or more containers from database');
+        }
+      }
+
+      // Only delete assistant if all containers were successfully deleted
+      if (successfulDeletions.length === containers.length) {
+        await strapi
+          .documents('api::assistant.assistant')
+          .delete({ documentId: assistant.documentId });
+        return ctx.send({
+          message: 'Assistant and associated resources deleted successfully',
+          deletedContainers: successfulDeletions.length,
+        });
+      } else {
+        return ctx.badRequest(
+          `Partial deletion: ${successfulDeletions.length} of ${containers.length} containers deleted. Assistant not deleted.`
+        );
+      }
+    } catch (error) {
+      console.error('Assistant deletion error:', error);
+      return ctx.badRequest(
+        error.message || 'Failed to delete assistant and associated resources'
+      );
+    }
+  },
+
   async getS3Settings() {
     const setting = await strapi.service('api::setting.setting').getSetting('S3_CONFIG');
 
@@ -183,5 +262,159 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
       s3SecretKey: config.secret_key,
       s3Url: config.url,
     };
+  },
+
+  async list(ctx) {
+    try {
+      // Fetch all assistants with their related data
+      const assistants = await strapi.documents('api::assistant.assistant').findMany({
+        populate: {
+          provinceId: true,
+          serviceCategoryId: true,
+          containerIds: {
+            populate: '*', // Get all container fields
+          },
+        },
+      });
+
+      // Format the response
+      const formattedAssistants = assistants.map(assistant => ({
+        id: assistant.id,
+        name: assistant.name,
+        metaData: assistant.metaData,
+        province: {
+          id: assistant.provinceId?.id,
+          code: assistant.provinceId?.code,
+          name: assistant.provinceId?.name,
+        },
+        serviceCategory: {
+          id: assistant.serviceCategoryId?.id,
+          name: assistant.serviceCategoryId?.name,
+        },
+        containers: assistant.containerIds?.map(container => ({
+          id: container.id,
+          name: container.name,
+          type: container.assistantType,
+          configured: container.configured,
+          metaData: container.metaData,
+        })),
+      }));
+
+      return ctx.send({
+        data: formattedAssistants,
+        meta: {
+          count: formattedAssistants.length,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching assistants:', error);
+      return ctx.badRequest(error.message || 'Failed to fetch assistants');
+    }
+  },
+
+  async updateAgents(ctx) {
+    const { id } = ctx.params;
+    const { instruction } = ctx.request.body;
+
+    try {
+      if (!instruction) {
+        return ctx.badRequest('Instruction is required in request body');
+      }
+
+      // Check if assistant exists
+      const assistant = await strapi.documents('api::assistant.assistant').findOne({
+        documentId: id,
+        populate: {
+          containerIds: true,
+        },
+      });
+
+      if (!assistant) {
+        return ctx.notFound('Assistant not found');
+      }
+
+      // Update assistant metadata with new instruction
+      await strapi.documents('api::assistant.assistant').update({
+        documentId: id,
+        data: {
+          metaData: {
+            ...assistant.metaData,
+            instruction,
+          },
+        },
+      });
+
+      // Track successful and failed updates
+      const results = {
+        successful: [],
+        failed: [],
+      };
+
+      // Update agents for each container
+      await Promise.all(
+        assistant.containerIds.map(async container => {
+          try {
+            // First get the agents for this container
+            const agents = await strapi
+              .service('api::custom.agent')
+              .getAgents(container.name);
+
+            if (agents.length === 0) {
+              throw new Error('No agents found in the container');
+            }
+
+            // Update the first agent
+            const agentUpdateResult = await strapi
+              .service('api::custom.agent')
+              .updateAgent(container.name, agents[0], instruction);
+
+            results.successful.push({
+              containerName: container.name,
+              agentId: agents[0].agent_id,
+              result: {
+                status: agentUpdateResult.status,
+                message: agentUpdateResult.message || 'Agent updated successfully',
+              },
+            });
+
+            // Update container instruction
+            await strapi.documents('api::container.container').update({
+              documentId: container.documentId,
+              data: {
+                metaData: {
+                  ...container.metaData,
+                  instruction,
+                },
+
+              },
+            });
+          } catch (error) {
+            console.error(
+              `Failed to update agent for container ${container.name}:`,
+              error
+            );
+            results.failed.push({
+              containerName: container.name,
+              error: error.message,
+            });
+          }
+        })
+      );
+
+      // Return appropriate response based on results
+      if (results.failed.length === 0) {
+        return ctx.send({
+          message: 'All agents updated successfully',
+          results,
+        });
+      } else if (results.successful.length === 0) {
+        return ctx.badRequest('Failed to update any agents', { results });
+      } else {
+        return ctx.badRequest('Some agent updates failed', { results });
+      }
+    } catch (error) {
+      console.error('Agent update error:', error);
+      return ctx.badRequest(error.message || 'Failed to update agents');
+    }
   },
 }));
