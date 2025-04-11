@@ -127,6 +127,15 @@ services:
 
       # Apply WebSocket middlewares only to WebSocket router
       - traefik.http.routers.api-wrapper-ws.middlewares=ws-headers,ws-upgrade
+
+      # Add headers for static assets and modules
+      - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-Host=${WRAPPER_DOMAIN}
+      - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-For=${WRAPPER_DOMAIN}
+      - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-Prefix=/
+
+      # Apply headers middleware to HTTP router
+      - traefik.http.routers.api-wrapper-http.middlewares=strapi-headers
     networks:
       - ragapp-network
     depends_on:
