@@ -47,10 +47,11 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       const ragUrl = JSON.parse(
         await strapi.service('api::setting.setting').getSetting('RAG_APP_URL')
       );
-      const activeProvider = JSON.parse(
-        await strapi.service('api::setting.setting').getSetting('ACTIVE_MODEL_PROVIDER')
-      );
+      const activeProvider = await strapi
+        .service('api::setting.setting')
+        .getSetting('ACTIVE_MODEL_PROVIDER');
 
+      console.log({ ragUrl, activeProvider });
       if (!ragUrl || !activeProvider) {
         return ctx.badRequest('Missing configuration settings(activeProvider)');
       }

@@ -46,6 +46,8 @@ module.exports = createCoreController(
           .query("api::province.province")
           .findOne({ where: { externalId: provinceId } });
 
+        console.log({ serviceCategory, province });
+
         if (!serviceCategory || !province) {
           return ctx.badRequest("Invalid service category or province");
         }
