@@ -17,7 +17,7 @@ RUN make build-frontend
 # Prepare the requirements stage
 FROM python:3.11 AS requirements-stage
 WORKDIR /tmp
-RUN pip install poetry
+RUN pip install poetry==1.7.1
 COPY ./pyproject.toml ./poetry.lock* /tmp/
 RUN poetry export --output requirements.txt --without-hashes
 
