@@ -30,9 +30,9 @@ module.exports = {
       await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
-    const io = require('socket.io')(strapi.server.httpServer, {
+    const io = new Server(strapi.server.httpServer, {
       cors: {
-        origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+        origin: [/^http:\/\/localhost:\d+$/, /^https?:\/\/([a-zA-Z0-9-]+\.)?lawvo\.com$/],
         methods: ['GET', 'POST'],
         credentials: true,
       },

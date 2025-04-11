@@ -102,28 +102,26 @@ services:
     labels:
       - traefik.enable=true
 
-      # --- HTTP Service and Router ---
-      # Define the standard HTTP service
-      - traefik.http.services.api-wrapper-http.loadbalancer.server.port=1337
-      # Define the router for standard HTTP/S traffic (excluding socket.io path)
-      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/socket.io/`)
-      # Standard TLS configuration for HTTP router
-      - traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt
-      - traefik.http.routers.api-wrapper-http.service=api-wrapper-http
-      - traefik.http.routers.api-wrapper-http.entrypoints=websecure
+      # --- HTTP Service (for Strapi Admin / non-WS traffic) ---
+      - "traefik.http.services.api-wrapper-http.loadbalancer.server.port=1337"
+      # Define router for HTTP traffic (explicitly lower priority for WS path)
+      - "traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`)"
+      - "traefik.http.routers.api-wrapper-http.priority=1" # Lower priority
+      - "traefik.http.routers.api-wrapper-http.service=api-wrapper-http"
+      - "traefik.http.routers.api-wrapper-http.entrypoints=websecure"
+      - "traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt"
 
-      # --- WebSocket Service and Router ---
-      # Define the WebSocket service
-      - traefik.http.services.api-wrapper-ws.loadbalancer.server.port=1337
-      # Configure the WebSocket service scheme (comment out/remove transport=insecure if not needed or causes issues)
-      - traefik.http.services.api-wrapper-ws.loadbalancer.server.scheme=ws
-      - traefik.http.services.api-wrapper-ws.loadbalancer.server.transport=insecure # Often needed if backend doesn't handle WSS directly
-      # Define the router for WebSocket traffic
-      - traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)
-      # TLS configuration for WebSocket router
-      - traefik.http.routers.api-wrapper-ws.tls.certresolver=letsencrypt
-      - traefik.http.routers.api-wrapper-ws.service=api-wrapper-ws
-      - traefik.http.routers.api-wrapper-ws.entrypoints=websecure
+      # --- WebSocket Service ---
+      - "traefik.http.services.api-wrapper-ws.loadbalancer.server.port=1337"
+      # Uncomment ONLY if backend requires explicit ws:// connection or has self-signed cert issues:
+      # - "traefik.http.services.api-wrapper-ws.loadbalancer.server.scheme=ws"
+      # - "traefik.http.services.api-wrapper-ws.loadbalancer.server.transport=insecure"
+      # Define router for WebSocket traffic (higher priority)
+      - "traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)"
+      - "traefik.http.routers.api-wrapper-ws.priority=10" # Higher priority
+      - "traefik.http.routers.api-wrapper-ws.service=api-wrapper-ws"
+      - "traefik.http.routers.api-wrapper-ws.entrypoints=websecure"
+      - "traefik.http.routers.api-wrapper-ws.tls.certresolver=letsencrypt"
     networks:
       - ragapp-network
     depends_on:
