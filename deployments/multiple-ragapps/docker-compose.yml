@@ -101,27 +101,17 @@ services:
       - ./.env
     labels:
       - traefik.enable=true
-
-      # --- HTTP Service (for Strapi Admin / non-WS traffic) ---
-      - "traefik.http.services.api-wrapper-http.loadbalancer.server.port=1337"
-      # Define router for HTTP traffic (explicitly lower priority for WS path)
-      - "traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`)"
-      - "traefik.http.routers.api-wrapper-http.priority=1" # Lower priority
-      - "traefik.http.routers.api-wrapper-http.service=api-wrapper-http"
-      - "traefik.http.routers.api-wrapper-http.entrypoints=websecure"
-      - "traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt"
-
-      # --- WebSocket Service ---
-      - "traefik.http.services.api-wrapper-ws.loadbalancer.server.port=1337"
-      # Uncomment ONLY if backend requires explicit ws:// connection or has self-signed cert issues:
-      # - "traefik.http.services.api-wrapper-ws.loadbalancer.server.scheme=ws"
-      # - "traefik.http.services.api-wrapper-ws.loadbalancer.server.transport=insecure"
-      # Define router for WebSocket traffic (higher priority)
-      - "traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)"
-      - "traefik.http.routers.api-wrapper-ws.priority=10" # Higher priority
-      - "traefik.http.routers.api-wrapper-ws.service=api-wrapper-ws"
-      - "traefik.http.routers.api-wrapper-ws.entrypoints=websecure"
-      - "traefik.http.routers.api-wrapper-ws.tls.certresolver=letsencrypt"
+      # Define a single service for api-wrapper
+      - "traefik.http.services.api-wrapper.loadbalancer.server.port=1337"
+      # Middleware to handle WebSocket upgrade
+      - "traefik.http.middlewares.api-wrapper-ws-upgrade.headers.customrequestheaders.Upgrade=websocket"
+      # Define a single router with a rule matching your domain
+      - "traefik.http.routers.api-wrapper.rule=Host(`${WRAPPER_DOMAIN}`)"
+      - "traefik.http.routers.api-wrapper.service=api-wrapper"
+      - "traefik.http.routers.api-wrapper.entrypoints=websecure"
+      - "traefik.http.routers.api-wrapper.tls.certresolver=letsencrypt"
+      # Apply the WebSocket upgrade middleware to the router
+      - "traefik.http.routers.api-wrapper.middlewares=api-wrapper-ws-upgrade"
     networks:
       - ragapp-network
     depends_on:
