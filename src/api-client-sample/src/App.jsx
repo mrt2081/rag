@@ -8,7 +8,7 @@ const socket = io(STRAPI_URL, {
   withCredentials: true,
   transports: ["websocket", "polling"],
   cors: {
-    origin: "http://localhost:5174", // Replace with your frontend URL
+    origin: "http://localhost:5173", // Replace with your frontend URL
     methods: ["GET", "POST"],
     credentials: true,
   },
