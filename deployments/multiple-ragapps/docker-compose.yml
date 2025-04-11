@@ -103,11 +103,18 @@ services:
       - traefik.enable=true
       # Single service definition
       - traefik.http.services.api-wrapper.loadbalancer.server.port=1337
-      # Single router with domain rule
-      - traefik.http.routers.api-wrapper.rule=Host(`${WRAPPER_DOMAIN}`)
-      - traefik.http.routers.api-wrapper.service=api-wrapper
-      - traefik.http.routers.api-wrapper.entrypoints=websecure
-      - traefik.http.routers.api-wrapper.tls.certresolver=letsencrypt
+
+      # Regular HTTP router for Strapi
+      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/socket.io/`)
+      - traefik.http.routers.api-wrapper-http.service=api-wrapper
+      - traefik.http.routers.api-wrapper-http.entrypoints=websecure
+      - traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt
+
+      # WebSocket router for Socket.IO
+      - traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)
+      - traefik.http.routers.api-wrapper-ws.service=api-wrapper
+      - traefik.http.routers.api-wrapper-ws.entrypoints=websecure
+      - traefik.http.routers.api-wrapper-ws.tls.certresolver=letsencrypt
 
       # WebSocket headers middleware
       - traefik.http.middlewares.ws-headers.headers.customrequestheaders.X-Forwarded-Proto=https
@@ -118,8 +125,8 @@ services:
       - traefik.http.middlewares.ws-upgrade.headers.customrequestheaders.Upgrade=websocket
       - traefik.http.middlewares.ws-upgrade.headers.customrequestheaders.Connection=Upgrade
 
-      # Apply middlewares to router
-      - traefik.http.routers.api-wrapper.middlewares=ws-headers,ws-upgrade
+      # Apply WebSocket middlewares only to WebSocket router
+      - traefik.http.routers.api-wrapper-ws.middlewares=ws-headers,ws-upgrade
     networks:
       - ragapp-network
     depends_on:
