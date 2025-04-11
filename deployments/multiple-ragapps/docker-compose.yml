@@ -104,8 +104,14 @@ services:
       # Single service definition
       - traefik.http.services.api-wrapper.loadbalancer.server.port=1337
 
-      # Main router for all HTTP traffic (including Strapi)
-      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`)
+      # Router for Strapi's node_modules
+      - traefik.http.routers.api-wrapper-modules.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/node_modules/.strapi/`)
+      - traefik.http.routers.api-wrapper-modules.service=api-wrapper
+      - traefik.http.routers.api-wrapper-modules.entrypoints=websecure
+      - traefik.http.routers.api-wrapper-modules.tls.certresolver=letsencrypt
+
+      # Main router for all other HTTP traffic (including Strapi)
+      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/node_modules/.strapi/`)
       - traefik.http.routers.api-wrapper-http.service=api-wrapper
       - traefik.http.routers.api-wrapper-http.entrypoints=websecure
       - traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt
@@ -134,8 +140,9 @@ services:
       - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-For=${WRAPPER_DOMAIN}
       - traefik.http.middlewares.strapi-headers.headers.customrequestheaders.X-Forwarded-Prefix=/
 
-      # Apply headers middleware to HTTP router
+      # Apply headers middleware to HTTP routers
       - traefik.http.routers.api-wrapper-http.middlewares=strapi-headers
+      - traefik.http.routers.api-wrapper-modules.middlewares=strapi-headers
     networks:
       - ragapp-network
     depends_on:
