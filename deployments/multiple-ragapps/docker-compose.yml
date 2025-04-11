@@ -116,8 +116,8 @@ services:
       # Define the WebSocket service
       - traefik.http.services.api-wrapper-ws.loadbalancer.server.port=1337
       # Configure the WebSocket service scheme (comment out/remove transport=insecure if not needed or causes issues)
-      # - traefik.http.services.api-wrapper-ws.loadbalancer.server.scheme=ws
-      # - traefik.http.services.api-wrapper-ws.loadbalancer.server.transport=insecure # Often needed if backend doesn't handle WSS directly
+      - traefik.http.services.api-wrapper-ws.loadbalancer.server.scheme=ws
+      - traefik.http.services.api-wrapper-ws.loadbalancer.server.transport=insecure # Often needed if backend doesn't handle WSS directly
       # Define the router for WebSocket traffic
       - traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)
       # TLS configuration for WebSocket router
