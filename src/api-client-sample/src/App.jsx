@@ -3,7 +3,7 @@ import io from "socket.io-client";
 import "./App.css";
 import ReactMarkdown from "react-markdown";
 
-const STRAPI_URL = "http://localhost:1337";
+const STRAPI_URL = "aiapi.lawvo.com";
 const socket = io(STRAPI_URL, {
   withCredentials: true,
   transports: ["websocket", "polling"],

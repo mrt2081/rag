@@ -101,17 +101,19 @@ services:
       - ./.env
     labels:
       - traefik.enable=true
-      # Define a single service for api-wrapper
-      - "traefik.http.services.api-wrapper.loadbalancer.server.port=1337"
-      # Middleware to handle WebSocket upgrade
-      - "traefik.http.middlewares.api-wrapper-ws-upgrade.headers.customrequestheaders.Upgrade=websocket"
-      # Define a single router with a rule matching your domain
-      - "traefik.http.routers.api-wrapper.rule=Host(`${WRAPPER_DOMAIN}`)"
-      - "traefik.http.routers.api-wrapper.service=api-wrapper"
-      - "traefik.http.routers.api-wrapper.entrypoints=websecure"
-      - "traefik.http.routers.api-wrapper.tls.certresolver=letsencrypt"
-      # Apply the WebSocket upgrade middleware to the router
-      - "traefik.http.routers.api-wrapper.middlewares=api-wrapper-ws-upgrade"
+      # Single service definition
+      - traefik.http.services.api-wrapper.loadbalancer.server.port=1337
+      # Single router with domain rule
+      - traefik.http.routers.api-wrapper.rule=Host(`${WRAPPER_DOMAIN}`)
+      - traefik.http.routers.api-wrapper.service=api-wrapper
+      - traefik.http.routers.api-wrapper.entrypoints=websecure
+      - traefik.http.routers.api-wrapper.tls.certresolver=letsencrypt
+      # WebSocket configuration
+      - traefik.http.services.api-wrapper.loadbalancer.server.scheme=ws
+      - traefik.http.services.api-wrapper.loadbalancer.server.transport=insecure
+      # Strip prefix middleware for socket.io
+      - traefik.http.middlewares.strip-socketio.stripprefix.prefixes=/socket.io
+      - traefik.http.routers.api-wrapper.middlewares=strip-socketio
     networks:
       - ragapp-network
     depends_on:
