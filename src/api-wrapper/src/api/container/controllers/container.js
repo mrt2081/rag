@@ -49,7 +49,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       );
       const activeProvider = await strapi
         .service('api::setting.setting')
-        .getSetting('ACTIVE_MODEL_PROVIDER')?.value;
+        .getSetting('ACTIVE_MODEL_PROVIDER');
 
       console.log({ ragUrl, activeProvider });
       if (!ragUrl || !activeProvider) {
@@ -62,7 +62,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
         staticEndpoint ||
         `/a/${province.code.toLowerCase()}-${serviceCategory.name
           .toLowerCase()
-          .replace(/\s+/g, '-')}-${activeProvider.toLowerCase()}/api/chat`;
+          .replace(/\s+/g, '-')}-${activeProvider?.value?.toLowerCase()}/api/chat`;
 
       // Format payload for OpenAI
       const formattedPayload = {
@@ -77,7 +77,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
           },
         ],
       };
-
+      console.log({ containerEndpoint });
       // Get valid token from RAG auth service
       const token = await strapi.service('api::custom.rag-auth').getValidToken();
       // Ensure endpoint starts with a slash

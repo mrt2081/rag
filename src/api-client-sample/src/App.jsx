@@ -3,7 +3,8 @@ import io from "socket.io-client";
 import "./App.css";
 import ReactMarkdown from "react-markdown";
 
-const STRAPI_URL = "https://aiapi.lawvo.com";
+// const STRAPI_URL = "https://aiapi.lawvo.com";
+const STRAPI_URL = "http://localhost:1337";
 const socket = io(STRAPI_URL, {
   withCredentials: true,
   transports: ["websocket", "polling"],
@@ -140,8 +141,8 @@ function App() {
       const payload = {
         messageHistory: messages,
         currentQuestion: inputMessage,
-        serviceCategoryId: "20", // Replace with actual category ID
-        provinceId: "2", // Replace with actual province ID
+        serviceCategoryId: "2", // Replace with actual category ID
+        provinceId: "9", // Replace with actual province ID
         socketId: socketId.current,
       };
 
