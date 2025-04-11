@@ -108,12 +108,18 @@ services:
       - traefik.http.routers.api-wrapper.service=api-wrapper
       - traefik.http.routers.api-wrapper.entrypoints=websecure
       - traefik.http.routers.api-wrapper.tls.certresolver=letsencrypt
-      # WebSocket configuration
-      - traefik.http.services.api-wrapper.loadbalancer.server.scheme=ws
-      - traefik.http.services.api-wrapper.loadbalancer.server.transport=insecure
-      # Strip prefix middleware for socket.io
-      - traefik.http.middlewares.strip-socketio.stripprefix.prefixes=/socket.io
-      - traefik.http.routers.api-wrapper.middlewares=strip-socketio
+
+      # WebSocket headers middleware
+      - traefik.http.middlewares.ws-headers.headers.customrequestheaders.X-Forwarded-Proto=https
+      - traefik.http.middlewares.ws-headers.headers.customrequestheaders.X-Forwarded-Host=${WRAPPER_DOMAIN}
+      - traefik.http.middlewares.ws-headers.headers.customrequestheaders.X-Forwarded-For=${WRAPPER_DOMAIN}
+
+      # WebSocket upgrade middleware
+      - traefik.http.middlewares.ws-upgrade.headers.customrequestheaders.Upgrade=websocket
+      - traefik.http.middlewares.ws-upgrade.headers.customrequestheaders.Connection=Upgrade
+
+      # Apply middlewares to router
+      - traefik.http.routers.api-wrapper.middlewares=ws-headers,ws-upgrade
     networks:
       - ragapp-network
     depends_on:
