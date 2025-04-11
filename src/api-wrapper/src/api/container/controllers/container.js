@@ -49,7 +49,7 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
       );
       const activeProvider = await strapi
         .service('api::setting.setting')
-        .getSetting('ACTIVE_MODEL_PROVIDER');
+        .getSetting('ACTIVE_MODEL_PROVIDER')?.value;
 
       console.log({ ragUrl, activeProvider });
       if (!ragUrl || !activeProvider) {

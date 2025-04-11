@@ -140,8 +140,8 @@ function App() {
       const payload = {
         messageHistory: messages,
         currentQuestion: inputMessage,
-        serviceCategoryId: "1", // Replace with actual category ID
-        provinceId: "1", // Replace with actual province ID
+        serviceCategoryId: "20", // Replace with actual category ID
+        provinceId: "2", // Replace with actual province ID
         socketId: socketId.current,
       };
 
