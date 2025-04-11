@@ -104,14 +104,14 @@ services:
       # Single service definition
       - traefik.http.services.api-wrapper.loadbalancer.server.port=1337
 
-      # Regular HTTP router for Strapi
-      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/socket.io/`)
+      # Regular HTTP router for Strapi (more permissive rule)
+      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/socket.io/`) && !PathPrefix(`/ws/`)
       - traefik.http.routers.api-wrapper-http.service=api-wrapper
       - traefik.http.routers.api-wrapper-http.entrypoints=websecure
       - traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt
 
       # WebSocket router for Socket.IO
-      - traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && PathPrefix(`/socket.io/`)
+      - traefik.http.routers.api-wrapper-ws.rule=Host(`${WRAPPER_DOMAIN}`) && (PathPrefix(`/socket.io/`) || PathPrefix(`/ws/`))
       - traefik.http.routers.api-wrapper-ws.service=api-wrapper
       - traefik.http.routers.api-wrapper-ws.entrypoints=websecure
       - traefik.http.routers.api-wrapper-ws.tls.certresolver=letsencrypt

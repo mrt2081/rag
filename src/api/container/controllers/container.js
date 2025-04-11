@@ -51,22 +51,25 @@ module.exports = createCoreController(
         }
 
         // Get RAG URL and active provider from settings
-        const ragUrl = JSON.parse(
-          await strapi.service("api::setting.setting").getSetting("RAG_APP_URL")
-        );
-        const activeProvider = JSON.parse(
-          await strapi
-            .service("api::setting.setting")
-            .getSetting("ACTIVE_MODEL_PROVIDER")
-        );
+        const ragUrl = await strapi
+          .service("api::setting.setting")
+          .getSetting("RAG_APP_URL");
+        const activeProvider = await strapi
+          .service("api::setting.setting")
+          .getSetting("ACTIVE_MODEL_PROVIDER");
 
         if (!ragUrl || !activeProvider) {
           return ctx.badRequest("Missing configuration settings");
         }
 
         // Construct the container endpoint
-        const containerEndpoint = "/a/test/api/chat"; // TODO: Update this line as needed
+        // Construct the container endpoint
+        const containerEndpoint = `/a/${province.code.toLowerCase()}-${serviceCategory.name
+          .toLowerCase()
+          .replace(/\s+/g, "-")}-${activeProvider.toLowerCase()}/api/chat`;
+        // const containerEndpoint = "/a/test/api/chat"; // TODO: Update this line as needed
 
+        console.log({ containerEndpoint });
         // Format payload for OpenAI
         const formattedPayload = {
           messages: [
