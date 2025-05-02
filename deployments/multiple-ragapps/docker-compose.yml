@@ -43,7 +43,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.2
-    command: start-dev --import-realm --hostname=http${TLS:+s}://${DOMAIN}/auth -Djava.net.preferIPv4Stack=true -Djgroups.dns.query=keycloak -Xms512m -Xmx1024m
+    command: start-dev --import-realm --hostname=http${TLS:+s}://${DOMAIN}/auth
     ports:
       - 8080:8080
     deploy:
@@ -62,6 +62,7 @@ services:
       # Keycloak admin user (with all permissions to all realms)
       - KEYCLOAK_ADMIN=admin
       - KEYCLOAK_ADMIN_PASSWORD=admin
+      - JAVA_OPTS=-Xms512m -Xmx1024m -Djava.net.preferIPv4Stack=true -Djgroups.dns.query=keycloak
     volumes:
       # Mount example realm data
       - ${STATE_DIR}/keycloak/example/:/opt/keycloak/data/
