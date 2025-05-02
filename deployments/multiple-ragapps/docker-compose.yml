@@ -43,9 +43,15 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.2
-    command: start-dev --import-realm --hostname=http${TLS:+s}://${DOMAIN}/auth
+    command: start-dev --import-realm --hostname=http${TLS:+s}://${DOMAIN}/auth -Djava.net.preferIPv4Stack=true -Djgroups.dns.query=keycloak -Xms512m -Xmx1024m
     ports:
       - 8080:8080
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
     labels:
       - traefik.enable=true
       - traefik.http.services.keycloak.loadbalancer.server.port=8080
