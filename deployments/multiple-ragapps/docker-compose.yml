@@ -1,6 +1,7 @@
 services:
   traefik:
     image: "traefik:v3.1"
+    restart: unless-stopped
     ports:
       - 80:80
       - 443:443
@@ -43,6 +44,7 @@ services:
 
   keycloak:
     image: quay.io/keycloak/keycloak:25.0.2
+    restart: unless-stopped
     command: start-dev --import-realm --hostname=http${TLS:+s}://${DOMAIN}/auth
     ports:
       - 8080:8080
@@ -73,6 +75,7 @@ services:
 
   manager:
     image: ${MANAGER_IMAGE:-ragapp/manager:latest}
+    restart: unless-stopped
     build: ../../src/manager
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -103,6 +106,7 @@ services:
 
   api-wrapper:
     image: ${API_WRAPPER_IMAGE:-rag-api-wrapper:latest}
+    restart: unless-stopped
     build: ../../src/api-wrapper
     env_file:
       - ./.env
