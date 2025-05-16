@@ -15,7 +15,7 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
       description,
       provinceId,
       serviceCategoryId,
-      isGeneral,
+      isGeneral = false,
     } = data.metaData || {};
 
     // Validate required fields
