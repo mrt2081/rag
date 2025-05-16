@@ -7,13 +7,21 @@ ENV NODE_ENV=${NODE_ENV}
 
 WORKDIR /opt/app
 COPY package*.json ./
-RUN npm install
+
+# Install dependencies with specific flags for Strapi
+RUN npm install --legacy-peer-deps
 
 COPY . .
 RUN chown -R node:node /opt/app
 USER node
 
-RUN ["npm", "run", "build"]
+# Build Strapi admin panel
+RUN npm run build
+
+# Clear any existing cache
+RUN rm -rf .strapi/cache
+
 EXPOSE 1337
 
-CMD ["npm", "run", "develop"] 
+# Use start instead of develop for production-like environment
+CMD ["npm", "run", "start"] 
