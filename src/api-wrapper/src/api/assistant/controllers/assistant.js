@@ -15,11 +15,14 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
       description,
       provinceId,
       serviceCategoryId,
+      isGeneral,
     } = data.metaData || {};
 
     // Validate required fields
-    if (!provinceId || !serviceCategoryId) {
-      return ctx.badRequest('Province and service category are required.');
+    if (!isGeneral && (!provinceId || !serviceCategoryId)) {
+      return ctx.badRequest(
+        'Province and service category are required for non-general assistants.'
+      );
     }
 
     // Check if instruction is provided and not empty
@@ -27,27 +30,34 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
       return ctx.badRequest('Instruction is required.');
     }
 
-    // Fetch province and service category
-    const provinces = await strapi.documents('api::province.province').findMany({
-      filters: { externalId: provinceId.toString() },
-    });
-    const province = provinces[0];
-    const serviceCategories = await strapi
-      .documents('api::service-category.service-category')
-      .findMany({
-        filters: { externalId: serviceCategoryId.toString() },
+    let province, serviceCategory, assistantName;
+
+    if (!isGeneral) {
+      // Fetch province and service category
+      const provinces = await strapi.documents('api::province.province').findMany({
+        filters: { externalId: provinceId.toString() },
       });
-    const serviceCategory = serviceCategories[0];
+      province = provinces[0];
+      const serviceCategories = await strapi
+        .documents('api::service-category.service-category')
+        .findMany({
+          filters: { externalId: serviceCategoryId.toString() },
+        });
+      serviceCategory = serviceCategories[0];
 
-    if (!province || !serviceCategory) {
-      return ctx.badRequest('Invalid province or service category.');
+      if (!province || !serviceCategory) {
+        return ctx.badRequest('Invalid province or service category.');
+      }
+
+      // Generate assistant name for specific assistant
+      assistantName = `${province.code.toLowerCase()}-${serviceCategory.name
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '')}`;
+    } else {
+      // Generate assistant name for general assistant
+      assistantName = `general-assistant`;
     }
-
-    // Generate assistant name
-    const assistantName = `${province.code.toLowerCase()}-${serviceCategory.name
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')}`;
 
     // Check for duplicate assistant name
     const existingAssistant = await strapi
@@ -86,8 +96,8 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
       const assistantData = {
         ...data,
         name: assistantName,
-        provinceId: province.id,
-        serviceCategoryId: serviceCategory.id,
+        provinceId: province?.id,
+        serviceCategoryId: serviceCategory?.id,
       };
 
       createdAssistant = await strapi.service('api::assistant.assistant').create({
@@ -110,6 +120,7 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
                 instruction: instruction || '',
                 searchFile: searchFile || '',
                 description: description || '',
+                isGeneral: isGeneral || false,
               },
             },
           })
@@ -385,7 +396,6 @@ module.exports = createCoreController('api::assistant.assistant', ({ strapi }) =
                   ...container.metaData,
                   instruction,
                 },
-
               },
             });
           } catch (error) {

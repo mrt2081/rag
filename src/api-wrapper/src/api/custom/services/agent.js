@@ -104,13 +104,22 @@ module.exports = () => ({
         .service('api::setting.setting')
         .getSetting('DATA_PATH');
 
+      // Get container to check if it's a general assistant
+      const container = await strapi.documents('api::container.container').findFirst({
+        filters: { name: containerName },
+      });
+
+      const isGeneral = container?.metaData?.isGeneral || false;
+
       const payload = {
         s3_bucket: s3Config.bucket_name,
         s3_enabled: true,
-        s3_path: `${s3DataPath.S3_BASE_PATH}/${provinceCode}/${serviceCategory
-          .toLowerCase()
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '')}`,
+        s3_path: isGeneral
+          ? s3DataPath.S3_BASE_PATH // Use base path for general assistant
+          : `${s3DataPath.S3_BASE_PATH}/${provinceCode}/${serviceCategory
+              .toLowerCase()
+              .replace(/[^a-z0-9]+/g, '-')
+              .replace(/^-+|-+$/g, '')}`,
         s3_path_meta_files: s3DataPath.S3_META_FILES_PATH,
       };
 
@@ -137,8 +146,8 @@ module.exports = () => ({
 
       // Destructure the responses
       const { status: agentStatus, data: agentData } = await this.updateAgent(
-        containerName, 
-        agentItem, 
+        containerName,
+        agentItem,
         instruction
       );
 
@@ -152,12 +161,12 @@ module.exports = () => ({
       return {
         agentResponse: {
           status: agentStatus,
-          ...agentData
+          ...agentData,
         },
         s3Response: {
           status: s3Status,
-          ...s3Data
-        }
+          ...s3Data,
+        },
       };
     } catch (error) {
       strapi.log.error('Error processing agent:', error);
