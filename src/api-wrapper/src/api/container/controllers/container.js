@@ -23,24 +23,35 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
         return ctx.badRequest('Request body is missing');
       }
 
-      const { messageHistory, currentQuestion, serviceCategoryId, provinceId, socketId } =
-        ctx.request.body;
+      const {
+        messageHistory,
+        currentQuestion,
+        serviceCategoryId,
+        provinceId,
+        socketId,
+        isGeneral = false,
+      } = ctx.request.body;
 
       // Validate required fields
-      if (!serviceCategoryId || !provinceId) {
-        return ctx.badRequest('Missing required fields');
+      if (!isGeneral && (!serviceCategoryId || !provinceId)) {
+        return ctx.badRequest(
+          'Missing required fields: service category and province are required for non-general assistants'
+        );
       }
 
-      // Get service category and province
-      const serviceCategory = await strapi.db
-        .query('api::service-category.service-category')
-        .findOne({ where: { externalId: serviceCategoryId } });
-      const province = await strapi.db
-        .query('api::province.province')
-        .findOne({ where: { externalId: provinceId } });
+      let serviceCategory, province;
+      if (!isGeneral) {
+        // Get service category and province only for non-general assistants
+        serviceCategory = await strapi.db
+          .query('api::service-category.service-category')
+          .findOne({ where: { externalId: serviceCategoryId } });
+        province = await strapi.db
+          .query('api::province.province')
+          .findOne({ where: { externalId: provinceId } });
 
-      if (!serviceCategory || !province) {
-        return ctx.badRequest('Invalid service category or province');
+        if (!serviceCategory || !province) {
+          return ctx.badRequest('Invalid service category or province');
+        }
       }
 
       // Get RAG URL and active provider from settings
@@ -58,11 +69,12 @@ module.exports = createCoreController('api::container.container', ({ strapi }) =
 
       // Use static endpoint if environment variable is set
       const staticEndpoint = process.env.STATIC_CONTAINER_ENDPOINT;
-      const containerEndpoint =
-        staticEndpoint ||
-        `/a/${province.code.toLowerCase()}-${serviceCategory.name
-          .toLowerCase()
-          .replace(/\s+/g, '-')}-${activeProvider?.value?.toLowerCase()}/api/chat`;
+      const containerEndpoint = isGeneral
+        ? `/a/general-assistant-${activeProvider?.value?.toLowerCase()}/api/chat`
+        : staticEndpoint ||
+          `/a/${province.code.toLowerCase()}-${serviceCategory.name
+            .toLowerCase()
+            .replace(/\s+/g, '-')}-${activeProvider?.value?.toLowerCase()}/api/chat`;
 
       // Format payload for OpenAI
       const formattedPayload = {
