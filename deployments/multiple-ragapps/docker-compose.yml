@@ -122,7 +122,7 @@ services:
       - traefik.http.routers.api-wrapper-modules.tls.certresolver=letsencrypt
 
       # Main router for all other HTTP traffic (including Strapi)
-      #- traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`) && !PathPrefix(`/node_modules/.strapi/`)
+      - traefik.http.routers.api-wrapper-http.rule=Host(`${WRAPPER_DOMAIN}`)
       - traefik.http.routers.api-wrapper-http.service=api-wrapper
       - traefik.http.routers.api-wrapper-http.entrypoints=websecure
       - traefik.http.routers.api-wrapper-http.tls.certresolver=letsencrypt
